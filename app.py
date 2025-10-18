@@ -9,9 +9,14 @@ def health_check():
 
 @app.post("/v1/report")
 async def send_now(req: Request):
-    data = await req.json()
-    print("Received data:", data)
-    return {"ok": True, "message": "Report received successfully."}
-    
+    # در برابر JSON خراب مقاوم:
+    try:
+        data = await req.json()
+    except Exception:
+        body = await req.body()
+        data = {"raw": body.decode("utf-8", "ignore")}
+    # اینجا فعلاً فقط برمی‌گردانیم تا مطمئن شویم 500 نمی‌گیریم
+    return {"ok": True, "received": data}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8080)
