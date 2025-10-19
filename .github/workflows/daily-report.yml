@@ -1,0 +1,38 @@
+name: Daily Telegram Report
+
+on:
+  schedule:
+    - cron: '0 17 * * *'  # هر روز ساعت 21 تهران (17:00 UTC)
+  workflow_dispatch:      # اجازه اجرای دستی هم بده
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install requests persiantools jdatetime babel pytz
+
+      - name: Build message (Jalali date + Market Data)
+        run: |
+          python .github/scripts/build_msg.py > message.txt
+
+      - name: Send to Telegram
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.CHAT_ID }}
+        run: |
+          MSG=$(cat message.txt | jq -s -R .)
+          curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            -d chat_id="${CHAT_ID}" \
+            -d parse_mode="HTML" \
+            -d text="$(cat message.txt)"
